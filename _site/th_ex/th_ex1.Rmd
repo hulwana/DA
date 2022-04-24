@@ -1,7 +1,7 @@
 ---
 title: "Take-home Exercise 1"
 description: |
-  In this Take-home Exercise 1, I will explore....
+  In this Take-home Exercise 1, we will examine the deomgraphic distribution of volunteered participants from Ohio USA.
 author:
   - name: Hulwana Saifulzaman 
     url: https://www.linkedin.com/in/hulwana-saifulzaman/
@@ -18,20 +18,24 @@ knitr::opts_chunk$set(echo = TRUE,
                       message = FALSE)
 ```
 
-# Overview
+# 1. Overview
 
 In this take-home exercise, appropriate static statistical graphics methods are used to reveal the demographic of the city of Engagement, Ohio USA. 
 
-The data should be processed by using appropriate tidyverse family of packages and the statistical graphics must be prepared using ggplot2 and its extensions.
 
 
-# Getting Started
+Anticipating rapid growth, the city of Engagement, Ohio USA is doing a participatory urban planning exercise to understand the current state of the city and identify opportunities for future growth. About 1000 representative residents in this modest-sized city have agreed to provide data using the city’s urban planning app, which records the places they visit, their spending, and their purchases, among other things. From these volunteers, the city will have data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received. As a visual analytics expert, you have joined the city planning team to make sense of the data provided by these residents.
+
+The data would be processed by using appropriate tidyverse family of packages and the statistical graphics would be prepared using ggplot2 and its extensions.
+
+
+# 2. Getting Started
 Before we get started, it is important for us to ensure that the required R packages have been installed. If yes, we will load the R packages. If they have yet to be installed, we will install the R packages and load them onto R environment.
 
 The chunk code below will do the trick.
 
 ```{r}
-packages = c('tidyverse')
+packages = c('tidyverse', 'ggthemes')
 
 for(p in packages){
   if(!require(p, character.only = T)){
@@ -41,23 +45,253 @@ for(p in packages){
 }
 ```
 
-# Importing Data
+# 3. Dataset
 
-The code chunk below import *Exam_data.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *exam_data*.
+The *Participants* dataset has been obtained from the *Attributes* folder retrieved from [**Vast Challenge 2022**](https://vast-challenge.github.io/2022/) website.
+
+## 3.1. Importing Data
+
+The code chunk below import *Participants.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *exam_data*.
 
 ```{r}
-exam_data <- read_csv("data/Exam_data.csv")
+participants_data <- read_csv("data/Participants.csv")
 ```
+## 3.2. Data Dictionary
 
-# A Simple Bar Chart
+The following data definition has been extracted from the *VAST Challenge 2022 Dataset Descriptions* file which can be obtained from the *Vast-Challenge-2022* folder downloaded earlier.
+
+#### Data definition
+*Participants.csv* data contains information about the residents of Engagement, OH that have agreed to participate in
+this study.
+
+● participantId (integer): unique ID assigned to each participant
+
+● householdSize (integer): the number of people in the participant’s household
+
+● haveKids (boolean): whether there are children living in the participant’s household
+
+● age (integer): participant’s age in years at the start of the study
+
+● educationLevel (string factor): the participant’s education level, one of:
+{"Low", "HighSchoolOrCollege", "Bachelors", "Graduate"}
+
+● interestGroup (char): a char representing the participant’s stated primary interest
+group, one of {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}. Note: specific topics of
+interest have been redacted to avoid bias.
+
+● joviality (float): a value ranging from [0,1] indicating the participant’s overall
+happiness level at the start of the study.
+
+## 3.3. Data Exploration
+
+The participants data consists of 1011 observations with 7 variables namely *participantID*, *householdSize*, *haveKids*, *age*, *educationLevel*, *interestGroup* and *joviality*. We will omit *participantID* from our exploration as it has no significant meaning. To visualize the distribution of the 6 other variables, we will plot a bar chart to understand the spread.
 
 The code chunk below plot a bar chart by using [`geom_bar`](https://www.rdocumentation.org/packages/ggplot2/versions/1.0.1/topics/geom_bar) of [**ggplot2**](https://ggplot2.tidyverse.org/).
 
+### 3.2.1.Summary Statistic
+
 ```{r}
-ggplot(data = exam_data,
-       aes(x = RACE)) +
-  geom_bar()
+summary(participants_data)
 ```
+
+
+
+### 3.2.2. Distribution of Household Size
+
+We observe that there are 3 distinct groups under *householdSize* which are 1, 2 and 3. This indicates that for this particular sample, the participants have smaller family size, with *householdSize = 2* having the highest frequency.
+
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = householdSize)) +
+  geom_bar(fill = "navy") + 
+  geom_text(stat="count", 
+      aes(label=paste0(..count.., " (", 
+      round(..count../sum(..count..)*100,
+            1), "%)")),
+      vjust=-1) +
+  xlab("Household Size") +
+  ylab("Count") +
+  theme_classic() +
+  coord_cartesian(ylim=c(0,400)) +
+  ggtitle("Distribution of Household Size")
+```
+When we take a look at the average of *persons per household, 2016-2020* for Ohio obtained from [**U.S.Census Bureau**](https://www.census.gov/quickfacts/OH), it roughly coincides with the above observation with a value of 2.41. Thus, depicting that the Ohio population has a preference to have smaller families. 
+
+### 3.2.3. Distribution of Have Kids
+
+For *haveKids* it is a logical data which takes either TRUE or FALSE values. We see that majority of the participants do not have kids yet.
+
+```{r}
+## make householdSize to be factor
+participants_data$householdSize <- as.factor(participants_data$householdSize)
+
+ggplot(data = participants_data,
+       aes(x = haveKids)) +
+  geom_bar(fill = "navy") + 
+  geom_text(stat="count", 
+      aes(label=paste0(..count.., " (", 
+      round(..count../sum(..count..)*100,
+            1), "%)")),
+      vjust=-1) +
+  xlab("Have Kids") +
+  ylab("Count") +
+  theme_classic() +
+  coord_cartesian(ylim=c(0,750)) + 
+  ggtitle("Distribution of Have Kids")
+```
+## Distribution of Age
+
+As *age* consists of many distinct categories, the annotation of count for each age is omited and instead we increase the number of ticks and include grid lines based on the y-axis for readability.
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = age)) +
+  geom_bar(fill = "navy") +
+  xlab("Age") +
+  ylab("Count") +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(color = "grey")) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_y_continuous(breaks = seq(0, 40, by = 5)) +
+  ggtitle("Age of Ohio participants")
+```
+As it is difficult to compare the discrete age, we will group them in gaps of 5 years  from age 20 - 60 years old.
+
+
+### 3.2.4. Distribution of Age Groups
+
+We can do this by implementing the following code.
+
+```{r}
+participants_data$ageGroup <- cut(participants_data$age,
+                                  breaks = c(-Inf,20, 25, 30, 35, 40, 45, 50, 55, 60, Inf),
+                                  labels = c("<20", "20-24", "25-29","30-34", "35-39", "40-44", "45-49","50-54", "55-59", ">60"),
+                                  right = FALSE)
+```
+
+
+
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = ageGroup)) +
+  geom_bar(fill = "navy") +
+  xlab("Age Group (years)") +
+  ylab("Count") +
+  geom_text(stat="count", 
+      aes(label = paste0(round(..count../sum(..count..)*100,1), "%"), vjust=-1)) +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(color = "grey")) +
+  scale_y_continuous(breaks = seq(0, 140, by = 20), limits = c(0, 140)) +
+  ggtitle("Distribution of Ohio participants by Age Group")
+```
+We notice that for age groups <20 and >60, the count is much lesser than the other age groups. This is due to the fact that for age <20, it only includes participants with age 18 or 19. Whereas for age, >60 it only includes participants who are aged 60 at the time of the survey.
+
+
+## Distribution of interestGroup
+
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = interestGroup)) +
+  geom_bar(fill = "navy") +
+  xlab("Interest Group") +
+  ylab("Count") +
+  geom_text(stat="count", 
+      aes(label = paste0(round(..count../sum(..count..)*100,1), "%"), vjust=-1)) +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(color = "grey")) +
+  scale_y_continuous(breaks = seq(0, 120, by = 20), limits = c(0, 120)) +
+  ggtitle("Distribution of Ohio participants by Interest Group")
+```
+## Distribution of Education Level
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = educationLevel)) +
+  geom_bar(fill = "navy") +
+  xlab("Education Level") +
+  ylab("Count") +
+  geom_text(stat="count", 
+      aes(label=paste0(..count.., " (", round(..count../sum(..count..)*100,1), "%)")), vjust=-1) +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(color = "grey")) +
+  scale_y_continuous(breaks = seq(0, 550, by = 100), limits = c(0, 550)) +
+  ggtitle("Distribution of Ohio participants by Education Level")
+```
+## Distribution of joviality
+
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = joviality)) +
+  geom_density()
+```
+## Variables combination to consider
+
+1. What is the age spread for the different education level?
+2. What is the age spread for household size? (need to first change household size into factors)
+3. What is the age spread for interest groups?
+4. Does education level have any pattern with household size?
+
+
+## to convert household size to factor instead or categorical
+
+```{r}
+participants_data$householdSize <- as.factor(participants_data$householdSize)
+```
+
+
+## 1. age and education level
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = age, y = educationLevel)) +
+  geom_boxplot()
+```
+## 2. Age and household size
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = ageGroup)) +
+  geom_bar() +
+  facet_grid(householdSize~.)
+```
+## Age spread of interest groups
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = ageGroup)) +
+  geom_bar() +
+  facet_wrap(.~interestGroup)
+```
+## Joviality and interest group
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = ageGroup, y = joviality)) +
+  geom_boxplot() +
+  facet_grid(educationLevel ~.)
+```
+## Joviality and education level
+
+```{r}
+ggplot(data = participants_data,
+       aes(x = interestGroup, y = joviality)) +
+  geom_boxplot() +
+  facet_grid(educationLevel~.)
+```
+## Challenges faced
+
+1. The small number of data.
+
+2. No information on the gender, race and economic status of the participants.
+
+2. Little information for the variable *interestGroup*.
+
+3.
+
 
 
 
