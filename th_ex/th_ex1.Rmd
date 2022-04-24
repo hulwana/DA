@@ -22,10 +22,6 @@ knitr::opts_chunk$set(echo = TRUE,
 
 In this take-home exercise, appropriate static statistical graphics methods are used to reveal the demographic of the city of Engagement, Ohio USA. 
 
-
-
-Anticipating rapid growth, the city of Engagement, Ohio USA is doing a participatory urban planning exercise to understand the current state of the city and identify opportunities for future growth. About 1000 representative residents in this modest-sized city have agreed to provide data using the city’s urban planning app, which records the places they visit, their spending, and their purchases, among other things. From these volunteers, the city will have data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received. As a visual analytics expert, you have joined the city planning team to make sense of the data provided by these residents.
-
 The data would be processed by using appropriate tidyverse family of packages and the statistical graphics would be prepared using ggplot2 and its extensions.
 
 
@@ -34,9 +30,8 @@ Before we get started, it is important for us to ensure that the required R pack
 
 The chunk code below will do the trick.
 
-```{r}
-packages = c('tidyverse', 'forcats')
-
+```{r, echo=FALSE}
+packages = c('tidyverse')
 for(p in packages){
   if(!require(p, character.only = T)){
     install.packages(p)
@@ -90,16 +85,21 @@ The code chunk below plot a bar chart by using [`geom_bar`](https://www.rdocumen
 
 ### 3.3.1.Summary Statistic
 
+To have a rough idea on the distribution of the variables, we ontained the summary statistics using the built-in function [`summary()`](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/summary).
+
 ```{r}
 summary(participants_data)
 ```
 
+### 3.3.2. Distribution of Household Size
 
+First we will convert *householdSize* into categorical variable by executing the following code.
 
-### 3.3.2. Distribution by Household Size
+```{r}
+participants_data$householdSize <- as.factor(participants_data$householdSize)
+```
 
 We observe that there are 3 distinct groups under *householdSize* which are 1, 2 and 3. This indicates that for this particular sample, the participants relatively have smaller family size, with *householdSize = 2* having the highest frequency.
-
 
 ```{r}
 ggplot(data = participants_data,
@@ -116,16 +116,13 @@ ggplot(data = participants_data,
   coord_cartesian(ylim=c(0,400)) +
   ggtitle("Distribution of Ohio participants by Household Size")
 ```
-When we take a look at the average of *persons per household, 2016-2020* for Ohio obtained from [**U.S.Census Bureau**](https://www.census.gov/quickfacts/OH), it roughly coincides with the above observation with a value of 2.41. Thus, depicting that the Ohio population has a preference to have smaller families. 
+When we take a look at the average of *persons per household, 2016-2020* for Ohio obtained from [**U.S.Census Bureau**](https://www.census.gov/quickfacts/OH), it roughly agrees with the above observation with a value of 2.41. Thus, depicting that the Ohio population has a preference to have smaller families. 
 
-### 3.3.3. Distribution by 'Have Kids'
+### 3.3.3. Distribution of 'Have Kids'
 
-For *haveKids* it is a logical data which takes either TRUE or FALSE values. We see that majority of the participants do not have kids yet. This variable has similar details as the previous chart in *3.3.2.*, where *householdSize = 3* would also give an indication whether the participant has kids.
+For the *haveKids* variable, it is a logical data which takes either TRUE or FALSE values. We see that majority of the participants do not have kids yet. This variable has similar details as the *householdSize* variable, where *householdSize = 3* would also give an indication whether the participants have kids.
 
 ```{r}
-## make householdSize to be factor
-participants_data$householdSize <- as.factor(participants_data$householdSize)
-
 ggplot(data = participants_data,
        aes(x = haveKids)) +
   geom_bar(fill = "navy") + 
@@ -138,11 +135,11 @@ ggplot(data = participants_data,
   ylab("Count") +
   theme_classic() +
   coord_cartesian(ylim=c(0,750)) + 
-  ggtitle("Distribution of Ohip participants by 'Have Kids'")
+  ggtitle("Distribution of 'Have Kids'")
 ```
 ### 3.3.4. Distribution by Age
 
-As *age* consists of many distinct categories, the label of count for each age is omitted and instead we increase the number of ticks and include horizontal grid lines for readability. The age ranges from 18-60 years old, indicating that the participants surveyed for this analysis are from the working population.
+As *age* consists of many distinct categories, the count label for each age is omitted and instead we increase the number of ticks and include horizontal grid lines for readability. The age ranges from 18-60 years old, indicating that the participants surveyed for this analysis are from the working population.
 
 ```{r}
 ggplot(data = participants_data,
@@ -159,21 +156,22 @@ ggplot(data = participants_data,
              color="red", linetype="dashed", size=1) +
   geom_text(aes(x=40, label="mean = 39.07", y=30), colour="red", angle=90, text=element_text(size=9))
 ```
-Based on the summary statistics calculated at *section 3.3.1*, the mean age of the participants is 39. As it is difficult to compare the discrete age, we will group them in interval of 5 years  from age 20 - 60 years old.
+Based on the summary statistics calculated at *section 3.3.1*, the mean age of the participants is 39.07. As it is difficult to compare the discrete ages, we will group them in interval of 5 years  from age 20 - 60 years old.
 
 
-#### 3.3.4.1. Distribution by Age Groups
+#### 3.3.4.1. Distribution of Age Groups
 
 We can do this by implementing the following code.
 
 ```{r}
 participants_data$ageGroup <- cut(participants_data$age,
                                   breaks = c(-Inf,20, 25, 30, 35, 40, 45, 50, 55, 60, Inf),
-                                  labels = c("<20", "20-24", "25-29","30-34", "35-39", "40-44", "45-49","50-54", "55-59", ">60"),
+                                  labels = c("<20", "20-24", "25-29","30-34", "35-39", 
+                                             "40-44", "45-49","50-54", "55-59", ">60"),
                                   right = FALSE)
 ```
 
-When we plot the distribution of the Ohio participants by *age group*, we see that the frequency is relatively similar among the groups with *<20*  and *>60* groups as the exception. This is due to the fact that for age *<20*, it only includes participants with age 18 or 19. Whereas for age *>60* it only includes participants who are aged 60 at the time of the survey.
+When we plot the distribution of the Ohio participants by *age group*, we see that the frequency is relatively similar among the groups with *<20* and *>60* groups as the exception. This is due to the fact that for age *<20*, it only includes participants with age 18 or 19. Whereas for age *>60* it only includes participants who are aged 60 at the time of the survey.
 
 ```{r}
 ggplot(data = participants_data,
@@ -188,8 +186,9 @@ ggplot(data = participants_data,
   scale_y_continuous(breaks = seq(0, 140, by = 20), limits = c(0, 140)) +
   ggtitle("Distribution of Ohio participants by Age Group")
 ```
-## Distribution by Interest Groups
+### 3.3.5. Distribution of Interest Groups
 
+The distribution of *interestGroup* are relatively the same for all groups, in which each group consists of 8.2% - 11.5% of the total participants. As the information on *interestGroup* have been redacted to avoid bias, we do not have specific details on what this variable means.
 
 ```{r}
 ggplot(data = participants_data,
@@ -204,13 +203,12 @@ ggplot(data = participants_data,
   scale_y_continuous(breaks = seq(0, 120, by = 20), limits = c(0, 120)) +
   ggtitle("Distribution of Ohio participants by Interest Group")
 ```
-## Distribution by Education Level
+### 3.3.6. Distribution by Education Level
 
-When the bar chart based on the education level was plotted, we note that majority of the participants minimally has completed high school or colleges.  More than one fifth of them, have a bachelor's degree.
+When the bar chart based on the education level was plotted, we note that majority of the participants minimally has completed high school or colleges.  More than one fifth of them has a bachelor's degree.
 
 ```{r}
-participants_data %>% mutate(educationLevel = fct_infreq(educationLevel)) %>%
-ggplot(aes(x = educationLevel)) +
+ggplot(data = participants_data, aes(x =reorder(educationLevel, educationLevel, function(x)-length(x)))) +
   geom_bar(fill = "navy") +
   xlab("Education Level") +
   ylab("Count") +
@@ -221,63 +219,64 @@ ggplot(aes(x = educationLevel)) +
   scale_y_continuous(breaks = seq(0, 550, by = 100), limits = c(0, 550)) +
   ggtitle("Distribution of Ohio participants by Education Level")
 ```
-## Distribution of joviality
+# 4. Deep Dive 
 
-```{r}
-ggplot(data = participants_data,
-       aes(x = joviality)) +
-  geom_density()
-```
-## Variables combination to consider
+We will further investigate, if there are any underlying patterns based on the demographic distribution of the Ohio participants.
 
-1. What is the age spread for the different education level?
-2. What is the age spread for household size? (need to first change household size into factors)
-3. What is the age spread for interest groups?
-4. Does education level have any pattern with household size?
+## 4.1. Comparing two variables
 
+### 4.1.1. Do younger participants achieve higher academic certifications than the older generation?
 
-## to convert household size to factor instead or categorical
-
-```{r}
-participants_data$householdSize <- as.factor(participants_data$householdSize)
-```
-
-
-## 1. age and education level (to exclude)
+Although there are slightly more younger participants (age 20-34) who have a bachelors' degree, the distribution of age group between the different education level is relatively similar.
 
 ```{r}
 ggplot(data = participants_data,
        aes(x = ageGroup)) +
-  geom_bar() +
+  geom_bar(aes(fill = educationLevel)) +
   facet_grid(.~educationLevel) +
-  coord_flip()
+  theme(axis.text.x = element_text(angle = 90)) +
+  ggtitle("Does age have any influence on the education level?")
 ```
-## 2. Age and household size
 
 ```{r}
 ggplot(data = participants_data,
-       aes(x = ageGroup)) +
-  geom_bar() +
-  facet_grid(.~householdSize) + 
-  coord_flip()
-```
-## Age spread of interest groups (to exclude)
-
-```{r}
-ggplot(data = participants_data,
-       aes(x = age)) +
+       aes(x = age, y = educationLevel)) +
   geom_boxplot() +
-  facet_grid(interestGroup~.)
+  geom_vline(aes(xintercept=mean(age,na.rm=T)),
+             color="red", linetype="dashed", size=1) +
+  stat_summary(geom = "point",fun.y="mean",colour ="green",size=2) +
+  ggtitle("Does age have any influence on the education level?")
 ```
-## Joviality Index based on Age Group and Education Level
+
+### 4.1.2. Does age have any influence on the participants' household size?
+
+Despite separating the participants based on their household size, we observe little difference in the mean age group. This shows that the age spread has little influence on the household size of the participants.
+
+```{r}
+ggplot(data = participants_data,
+       aes(y = age, x = householdSize)) +
+  geom_boxplot() +
+  geom_hline(aes(yintercept=mean(age,na.rm=T)),
+             color="red", linetype="dashed", size=1) +
+  geom_text(aes(x=3.3, label="mean = 39.07", y=40), colour="red", angle=0, text=element_text(size=9)) +
+  stat_summary(geom = "point",fun.y="mean",colour ="green",size=2) +
+  ggtitle("Does age have any influence on the household size?")
+```
+## 4.2. Participants' Joviality based on the Demographic Factor
+
+### 4.2.1. Joviality Index based on Age Group and Education Level
+
+Comparing the joviality index of the participant based on the level of education as well as age group, we spot that participants age less than 20 with either a bachelors degree or graduate certification has a higher jovial median than other combination groups. On the other hand, participant with *low* education level and age between 30-34 years old have the lowest median joviality.
 
 ```{r}
 ggplot(data = participants_data,
        aes(x = ageGroup, y = joviality)) +
   geom_boxplot() +
-  facet_grid(educationLevel ~.)
+  facet_grid(educationLevel ~.) 
 ```
-## Joviality Index based on Interest Group and Education Level
+### 4.2.2 Joviality Index based on Interest Group and Education Level
+
+Graduate participants with interest group A and low educated participants with interest group F have the two lowest median joviality values.
 
 ```{r}
 ggplot(data = participants_data,
@@ -285,13 +284,13 @@ ggplot(data = participants_data,
   geom_boxplot() +
   facet_grid(educationLevel~.)
 ```
-## Challenges faced
+# 5. Challenges faced
 
-1. The small number of data.
+1. No information on the gender, race, employment and economic status of the participants are found in the dataset. These information could further aid us in understanding if certain demographic factor has any influence on the needs of the community.
 
-2. No information on the gender, race and economic status of the participants.
+2. As the details for *interestGroup* has been redacted to eliminate biasness, we do not have an idea on what this variable means and thus might not be very useful for our analysis.
 
-3. Little information for the variable *interestGroup*.
+3. Although we noticed that educated participants with age less than 20 have higher median joviality index whereas the low educated participants of age 30-34 years old have the lowest median joviality index, we cannot be too quick to assume that the education level has large influence on the joviality values. We will need more details such as economic factor and employment details to better understand what is the real cause for such a difference in the median joviality index.
 
 
 
