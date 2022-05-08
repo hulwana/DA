@@ -1,0 +1,94 @@
+---
+title: "Take-home Exercise 3"
+description: |
+  In this take-home exercise 3, we will examine the financial status of the city of Engagement, Ohio USA using tidyverse, ggoplot2 and its extension.
+author:
+  - name: Hulwana Saifulzaman 
+    url: https://www.linkedin.com/in/hulwana-saifulzaman/
+    affiliation: SMU, Master of IT in Business
+    affiliation_url: https://scis.smu.edu.sg/master-it-business
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+# 1. Overview
+
+In this take-home exercise, appropriate static statistical graphics methods are used to reveal the financial status of the city of Engagement, Ohio USA. 
+
+The data would be processed by using appropriate tidyverse family of packages and the statistical graphics would be prepared using ggplot2 and its extensions.
+
+
+# 2. Getting Started
+Before we get started, it is important for us to ensure that the required R packages have been installed. If yes, we will load the R packages. If they have yet to be installed, we will install the R packages and load them onto R environment.
+
+The chunk code below will do the trick.
+
+```{r}
+packages = c('tidyverse')
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+# 3. Dataset
+
+The *Participants* dataset has been obtained from the *Attributes* folder retrieved from [**Vast Challenge 2022**](https://vast-challenge.github.io/2022/) website.
+
+## 3.1. Importing Data
+
+The code chunk below import *FinancialJournal.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *exam_data*.
+
+```{r}
+financial <- read_csv("data/FinancialJournal.csv")
+```
+## How does the financial health of the residents change over the period covered by the dataset? How do wages compare to the overall cost of living in Engagement? Are there groups that appear to exhibit similar patterns? Describe your rationale for your answers. Limit your response to 10 images and 500 words.
+
+## summary on finance data
+#### Timestamp covers from 2022-03-01 till 2023-05-25. How come 2023 or even timestamps that have not passed yet?
+```{r}
+summary(financial)
+```
+
+
+## data wrangling to get the monthly income
+```{r}
+income <- financial %>% 
+  filter(category == 'Wage') %>% # extract only wage data
+  select(participantId, amount) %>% # extract participant ID and amount columns
+  group_by(participantId) %>% # group by participant ID
+  summarise(Monthly_Income = sum(amount)/15) 
+# calculate average monthly income for each participant
+```
+
+## get the summary of the income
+
+#### we see that the mean income is 3668.5 with min 139.9 and max 17369.
+```{r}
+summary(income)
+```
+
+## data wrangling group by category and participant id
+### maybe should also filter the timestamp up till the last day of April? (need  to figure the code out)
+```{r}
+expenses <- financial %>% 
+  group_by(participantId,category) %>% # group by category
+  summarise(total_amount = sum(amount))
+```
+## what is the distribution of each category for all of the participants? for 
+```{r}
+education <- expenses %>% filter(category == "")
+```
+
+
+
+
