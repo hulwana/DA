@@ -14,6 +14,10 @@ navbar:
       menu:
       - text: "Take-home Exercise 1"
         href: "th_ex/th_ex1.html"
+    - text: "In Class Exercise"
+      menu:
+      - text: "In class ex 4"
+        href: "In_class_ex/In_class_ex_04.html"
     - text: "DataViz Makeover"
       menu:
       - text: "DataViz Makeover 1"

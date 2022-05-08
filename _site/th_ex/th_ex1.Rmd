@@ -46,7 +46,7 @@ The *Participants* dataset has been obtained from the *Attributes* folder retrie
 
 ## 3.1. Importing Data
 
-The code chunk below import *Participants.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *exam_data*.
+The code chunk below import *Participants.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *participants_data*.
 
 ```{r}
 participants_data <- read_csv("data/Participants.csv")
