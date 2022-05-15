@@ -20,7 +20,15 @@ knitr::opts_chunk$set(echo = TRUE,
 
 # 1. Overview
 
-In this take-home exercise, appropriate static statistical graphics methods are used to reveal the financial status of the city of Engagement, Ohio USA. 
+In this take-home exercise, appropriate static statistical graphics methods are used to reveal the financial status of the city of Engagement, Ohio USA, particularly on the business aspect. 
+
+The key questions to address are:
+
+● Which businesses appear to be more prosperous?
+
+● Which appear to be struggling?
+
+Due to limited data available, we will only examine the businesses of restaurants and pubs of the city of Engagement.
 
 The data would be processed by using appropriate tidyverse family of packages and the statistical graphics would be prepared using ggplot2 and its extensions.
 
@@ -31,7 +39,7 @@ Before we get started, it is important for us to ensure that the required R pack
 The chunk code below will do the trick.
 
 ```{r}
-packages = c('tidyverse')
+packages = c('tidyverse', 'lubridate', 'patchwork', 'RColorBrewer', 'ggthemes')
 for(p in packages){
   if(!require(p, character.only = T)){
     install.packages(p)
@@ -42,52 +50,98 @@ for(p in packages){
 
 # 3. Dataset
 
-The *Participants* dataset has been obtained from the *Attributes* folder retrieved from [**Vast Challenge 2022**](https://vast-challenge.github.io/2022/) website.
+The *TravelJournal* dataset has been obtained from the *Journals* folder retrieved from [**Vast Challenge 2022**](https://vast-challenge.github.io/2022/) website.
+
+The reason why this dataset is used as opposed to *FinancialJournal.csv* is because it contains data of the *travelEndLocationId* which is crucial in identifying how mcuh sales were genrated by each pubs or restaurants.
 
 ## 3.1. Importing Data
 
-The code chunk below import *FinancialJournal.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *exam_data*.
+The code chunk below import *TravelJournal.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *travel*.
 
 ```{r}
-financial <- read_csv("data/FinancialJournal.csv")
+travel <- read_csv("data/TravelJournal.csv")
 ```
-## How does the financial health of the residents change over the period covered by the dataset? How do wages compare to the overall cost of living in Engagement? Are there groups that appear to exhibit similar patterns? Describe your rationale for your answers. Limit your response to 10 images and 500 words.
 
-## summary on finance data
-#### Timestamp covers from 2022-03-01 till 2023-05-25. How come 2023 or even timestamps that have not passed yet?
+## 3.2. Data Definition
+
+The following data definition has been extracted from the *VAST Challenge 2022 Dataset Descriptions* file which can be obtained from the *Vast-Challenge-2022* folder downloaded earlier.
+
+### Data definition
+
+*TravelJournal.csv* data contains information about about participants’ motivation for movement around the city. This provides a compressed summary and additional context regarding location-event and financial transaction information contained in the Participant Logs.
+
+● participantId (integer): unique ID corresponding to the participant in question
+
+● travelStartTime (datetime): the time when the participant started traveling
+
+● travelStartLocationId (integer): the unique ID corresponding to the location
+the participant is leaving when they begin to travel, NA if unknown
+
+● travelEndTime (datetime): the time when the participant concluded their travel
+
+● travelEndLocationId (integer): the unique ID corresponding to the location the
+participant is traveling to
+
+● purpose (string factor): a description of the purpose for the recorded travel, one of:
+{“Coming Back From Restaurant”, “Eating”, “Going Back to Home”, “Recreation (Social
+Gathering)”, “Work/Home Commute”}
+
+● checkInTime (datetime): the time when the participant checked in to their
+destination
+
+● checkOutTime (datetime): the time when the participant left their destination
+
+● startingBalance (double): the participant’s starting balance at the beginning
+of their travels
+
+● endingBalance (double): the participant’s ending balance at the conclusion of
+their travel
+
+## 3.3. Data Structure and Summary
+
+The following codes are executed to reveal the structure and summary statistics of the data:
+
 ```{r}
-summary(financial)
+str(travel)
 ```
 
+## 3.4. Data Preparation
 
-## data wrangling to get the monthly income
+In order to get the sales volume for each of the pubs and restaurants, we will need to execute the following steps:
+
+● Filter the purpose to consists only of "Recreation (Social Gathering)" and "Eating".
+"Recreation (Social Gathering)" would refer to pubs whereas "Eating" would refer to restaurants.
+
+● Compute the amount spent by a customer at each venue by subtracting the endingBalance from the startingBalance.
+
+● Extract year-month, weekday and hour from the *checkInTime*. This will be used in the plotting of line chart (to see the monthly sales pattern) as well as for the generation of heatmap to visualize the check in rate of customers across the weekdays at an hourly interval.
+
 ```{r}
-income <- financial %>% 
-  filter(category == 'Wage') %>% # extract only wage data
-  select(participantId, amount) %>% # extract participant ID and amount columns
-  group_by(participantId) %>% # group by participant ID
-  summarise(Monthly_Income = sum(amount)/15) 
-# calculate average monthly income for each participant
+sales <- travel %>% select(participantId, travelEndLocationId, purpose, checkInTime, startingBalance, endingBalance) %>% filter(purpose == "Eating" | purpose == "Recreation (Social Gathering)") %>%  mutate(spend = startingBalance - endingBalance) %>% mutate(date = format(as.Date(checkInTime), "%Y-%m")) %>% mutate(wkday = wday(checkInTime, label = TRUE)) %>% mutate(hr = hour(checkInTime)) 
 ```
 
-## get the summary of the income
+#### Group the sales by the travelEndLocationId, date, weekday and hour
 
-#### we see that the mean income is 3668.5 with min 139.9 and max 17369.
 ```{r}
-summary(income)
+sales_hourly <- sales %>% group_by(purpose, travelEndLocationId, date, wkday, hr) %>% summarise(total = sum(spend))
 ```
 
-## data wrangling group by category and participant id
-### maybe should also filter the timestamp up till the last day of April? (need  to figure the code out)
+#### Pubs data
 ```{r}
-expenses <- financial %>% 
-  group_by(participantId,category) %>% # group by category
-  summarise(total_amount = sum(amount))
+pubs_hourly <- sales_hourly %>% filter(purpose == "Recreation (Social Gathering)")  
 ```
-## what is the distribution of each category for all of the participants? for 
-```{r}
-education <- expenses %>% filter(category == "")
-```
+
+# 4. Data Visualization
+
+## 4.1. Total sales for pubs
+
+In order to ascertain which pubs are prospering or struggling, we will compute the total sales throughout the priod covered and ranked them. 
+
+
+
+
+
+
 
 
 
