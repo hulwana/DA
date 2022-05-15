@@ -39,7 +39,8 @@ Before we get started, it is important for us to ensure that the required R pack
 The chunk code below will do the trick.
 
 ```{r}
-packages = c('tidyverse', 'lubridate', 'patchwork', 'RColorBrewer', 'ggthemes')
+packages = c('tidyverse', 'lubridate', 'patchwork', 'RColorBrewer', 'ggthemes', 
+             'ggiraph')
 for(p in packages){
   if(!require(p, character.only = T)){
     install.packages(p)
@@ -117,13 +118,24 @@ In order to get the sales volume for each of the pubs and restaurants, we will n
 ● Extract year-month, weekday and hour from the *checkInTime*. This will be used in the plotting of line chart (to see the monthly sales pattern) as well as for the generation of heatmap to visualize the check in rate of customers across the weekdays at an hourly interval.
 
 ```{r}
-sales <- travel %>% select(participantId, travelEndLocationId, purpose, checkInTime, startingBalance, endingBalance) %>% filter(purpose == "Eating" | purpose == "Recreation (Social Gathering)") %>%  mutate(spend = startingBalance - endingBalance) %>% mutate(date = format(as.Date(checkInTime), "%Y-%m")) %>% mutate(wkday = wday(checkInTime, label = TRUE)) %>% mutate(hr = hour(checkInTime)) 
+sales <- travel %>% select(participantId, travelEndLocationId, purpose, checkInTime, startingBalance, endingBalance) %>% 
+  filter(purpose == "Eating" | purpose == "Recreation (Social Gathering)") %>%  
+  mutate(spend = startingBalance - endingBalance) %>% 
+  mutate(date = format(as.Date(checkInTime), "%Y-%m")) %>% 
+  mutate(wkday = wday(checkInTime, label = TRUE)) %>% mutate(hr = hour(checkInTime)) 
+
+sales$travelEndLocationId <- as.character(sales$travelEndLocationId)
 ```
 
-#### Group the sales by the travelEndLocationId, date, weekday and hour
+#### Group the sales by the travelEndLocationId, date, weekday and hour. 
+
+● Count the number of customers checking in at each hour.
+
+● Sum the total sales at each hour.
 
 ```{r}
-sales_hourly <- sales %>% group_by(purpose, travelEndLocationId, date, wkday, hr) %>% summarise(total = sum(spend))
+sales_hourly <- sales %>% group_by(purpose, travelEndLocationId, date, wkday, hr) %>% 
+  summarise(total = sum(spend), customer = n())
 ```
 
 #### Pubs data
@@ -137,8 +149,197 @@ pubs_hourly <- sales_hourly %>% filter(purpose == "Recreation (Social Gathering)
 
 In order to ascertain which pubs are prospering or struggling, we will compute the total sales throughout the priod covered and ranked them. 
 
+```{r}
+pubs_t <- pubs_hourly %>% group_by(travelEndLocationId) %>% 
+  summarise(overall = sum(total))
+```
+
+### 4.1.1 Total sales for all pubs
+
+```{r}
+pubs_rank<- ggplot(data=pubs_t, aes(x=reorder(travelEndLocationId, -overall), y=overall)) + 
+  geom_bar(stat = "identity", fill="navy blue")  + 
+  ylim(0,900000) +
+  theme_bw() +
+  labs(x = "Pubs", y = "Total Sales", title ="Ranking of pubs by overall sales")
+
+pubs_rank
+```
+
+As the y-values are too long to be displayed in the chart we will format it for easy readability.
+
+```{r}
+so_formatter <- function(x) {
+  dplyr::case_when(
+      x < 1e3 ~ as.character(x),
+      x < 1e6 ~ paste0(as.character(x/1e3), "K"),
+      x < 1e9 ~ paste0(as.character(x/1e6), "M"),
+  )
+}
+
+pubs_t$lab <- so_formatter(signif(pubs_t$overall, digits=3))
+```
+
+### 4.2.1 Top 5 Pubs
+
+The top 5 performing pubs are pubs 1342, 1344, 1798, 893 1nd 1343. We notice that the top 2 pubs exceed $500k in sales across the study period.
+
+```{r}
+pubs_5 <- top_n(pubs_t, 5)
+
+pubs_5_bar<- ggplot(data=pubs_5, aes(x=reorder(travelEndLocationId, -overall), y=overall,  fill=travelEndLocationId)) + 
+  geom_bar(stat = "identity")  + 
+  ylim(0,1000000) +
+  geom_text(aes(label = lab , vjust = -1)) +
+  labs(x = "Pubs", y = "Total Sales", title ="Top 5 Pubs") +
+  #scale_fill_manual(values=c("skyblue2","dodgerblue1", "dodgerblue3","royalblue3","blue4")) + 
+  theme_bw() +
+  theme(legend.position = "none")
+
+pubs_5_bar
+```
+
+### 4.2.2 Monthly Sales Chart for top 5 pubs
+
+As the previous chart only compares at the overall sales volume, it provides no insights on how the businesses are performing overtime. Therefore, the *Monthly Sales chart* visualizes how the pubs are performing at a monthly interval. 
+
+#### Prepare the monthly sales data for pubs
+
+● Group by the pubs and year-month
+
+● As the month of May 2023 is incomplete we will filter that out.
+
+```{r}
+pubs_monthly <- pubs_hourly %>% group_by(travelEndLocationId, date) %>% 
+  summarise(monthly_sales = sum(total)) %>% filter(date != "2023-05")
+```
+
+### Inner join with the top 5 pubs
+
+We see that for the top 5 pubs in general, there is a sharp decline in sales from March 2022 to April 2022. Businesses continues to dip till May 2022 after which the sales fluctuates.
+
+```{r}
+pubs_line <- merge(pubs_monthly, pubs_5, by = "travelEndLocationId")
+
+pubs_5_line<-ggplot(data=pubs_line, aes(x=date, y=monthly_sales, group=travelEndLocationId)) +
+  geom_line(aes(color=travelEndLocationId)) +
+  theme_bw() +
+  ylim(20000, 120000) +
+  labs(x = "Date", y = "Sales", title ="Monthly Sales for Top 5 Pubs") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))
+
+pubs_5_line
+```
+
+#### Combine the 2 charts
+
+```{r}
+pubs_5_bar / pubs_5_line + plot_layout(heights = c(1,1))
+```
+
+### 4.3.1 Bottom 5 pubs
+
+Pubs with the lowest sales are pubs 443, 444, 442, 894 and 1799.
+
+```{r}
+pubs_b5 <- top_n(pubs_t, -5)
+
+pubs_b5_bar<- ggplot(data=pubs_b5, aes(x=reorder(travelEndLocationId, +overall), y=overall,  fill=travelEndLocationId)) + 
+  geom_bar(stat = "identity")  + 
+  ylim(0,400000) +
+  geom_text(aes(label = lab , vjust = -1)) +
+  labs(x = "Pubs", y = "Total Sales", title ="Bottom 5 Pubs") + 
+  theme_bw() +
+  theme(legend.position = "none")
+
+pubs_b5_bar
+```
+
+### 4.3.2 Monthly Sales Chart for bottom 5 pubs
+
+### Inner join with the bottom 5 pubs
+
+We notice similar sales pattern for the bottom 5 performing pubs as that of the top 5 performing pubs, in which there is a sharp decline in sales from March 2022 to April 2022 and the sales volume fluctuates from June 2022 onwards.
+
+```{r}
+pubs_lineb <- merge(pubs_monthly, pubs_b5, by = "travelEndLocationId")
+
+pubs_5_lineb<-ggplot(data=pubs_lineb, aes(x=date, y=monthly_sales, group=travelEndLocationId)) +
+  geom_line(aes(color=travelEndLocationId)) +
+  theme_bw() +
+  ylim(10000, 50000) +
+  labs(x = "Date", y = "Sales", title ="Monthly Sales for Bottom 5 Pubs") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))
+
+pubs_5_lineb
+```
+
+### 4.4. Customer check in for all pubs
+
+To deep-dive further on the customer patter of the pubs, we will plot the heatmap using the average check-in for each weekday at hourly intervals.
+
+#### Calculate the average number of customer per weekday at hourly intervals
+
+● Make *wkday* and *hr* into factors.
+
+● Get the average number of customers check in per timing.
+
+```{r}
+wkday_levels <- c('Sat', 'Fri', 'Thu', 'Wed', 'Tue', 'Mon', 'Sun')
+
+checkin_pubs<- sales_hourly %>% filter(purpose == "Recreation (Social Gathering)") %>%
+  mutate(wkday = factor(wkday, levels = wkday_levels),
+    hr  = factor(hr, levels = 0:23))
+
+checkin_pubs_hm <- checkin_pubs %>% group_by(travelEndLocationId, wkday, hr) %>% 
+  summarise(ave_checkin = mean(customer)) %>% na.omit
+```
+
+#### Plot the heatmap
+
+For pubs, we observe that the peak and non-peak hours are relatively similar for all pubs.
+
+```{r}
+pubs_heatmap<-ggplot(checkin_pubs_hm, 
+       aes(hr, 
+           wkday, 
+           fill = ave_checkin)) + 
+  geom_tile(color = "white", 
+          size = 0.1) + 
+  theme_tufte(base_family = "Helvetica") + 
+  coord_equal() +
+  scale_fill_gradient(name = "# of customers",
+                    low = "sky blue", 
+                    high = "dark blue") +
+  facet_wrap(~travelEndLocationId, ncol = 4) +
+  labs(x = NULL, y = NULL, 
+     title = "Average Check into pubs by weekday and time of the day") +
+  theme(axis.ticks = element_blank(),
+        axis.text.x = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 6) )
+
+pubs_heatmap
+```
+
+### 4.5. Plot the boxplot distribution of monthly sales for all pubs
+
+```{r}
+
+pubs_levels <- c('1342', '1344', '1798', '893', '1343', '1800', '892', '1799', '894', '442', '444', '443')
 
 
+pubs_monthly$travelEndLocationId <- factor(pubs_monthly$travelEndLocationId, pubs_levels)
+
+pubs_box_all <- ggplot(data=pubs_monthly, aes(x=travelEndLocationId, y=monthly_sales)) +
+              geom_boxplot() +
+              stat_summary(geom = "point",fun.y="mean",colour ="green",size=2) +
+              geom_hline(aes(yintercept=mean(monthly_sales,na.rm=T)), color="red", linetype="dashed", size=1) + 
+              ggtitle("Distribution of monthly sales")
+
+pubs_box_all
+```
 
 
 
