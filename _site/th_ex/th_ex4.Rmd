@@ -30,13 +30,17 @@ Before we get started, it is important for us to ensure that the required R pack
 The chunk code below will do the trick.
 
 ```{r}
-packages = c('tidyverse', 'lubridate', 'patchwork', 'RColorBrewer', 'ggthemes', 
-             'ggiraph')
-for(p in packages){
+packages = c('scales', 'viridis', 
+             'lubridate', 'ggthemes', 
+             'gridExtra', 'tidyverse', 
+             'readxl', 'knitr',
+             'data.table', 'ViSiElse')
+
+for (p in packages){
   if(!require(p, character.only = T)){
     install.packages(p)
   }
-  library(p, character.only = T)
+  library(p,character.only = T)
 }
 ```
 
@@ -53,6 +57,20 @@ The code chunk below import *TravelJournal.csv* from the data folder by using [`
 travel <- read_csv("data/TravelJournal.csv")
 ```
 
+#### Participant log 
+
+```{r}
+parti_1 <- read_csv("C:/Users/Hulwa/Downloads/ISSS608/VAST-Challenge-2022/VAST-Challenge-2022/Datasets/Activity Logs/ParticipantStatusLogs1.csv")
+
+parti_2 <- read_csv("C:/Users/Hulwa/Downloads/ISSS608/VAST-Challenge-2022/VAST-Challenge-2022/Datasets/Activity Logs/ParticipantStatusLogs2.csv")
+```
+
+### combine both 
+
+```{r}
+parti_com <- rbind(parti_1, parti_2)
+```
+
 ## 3.2. Data Definition
 
 The following data definition has been extracted from the *VAST Challenge 2022 Dataset Descriptions* file which can be obtained from the *Vast-Challenge-2022* folder downloaded earlier.
@@ -61,39 +79,13 @@ The following data definition has been extracted from the *VAST Challenge 2022 D
 
 *TravelJournal.csv* data contains information about about participants’ motivation for movement around the city. This provides a compressed summary and additional context regarding location-event and financial transaction information contained in the Participant Logs.
 
-● participantId (integer): unique ID corresponding to the participant in question
 
-● travelStartTime (datetime): the time when the participant started traveling
 
-● travelStartLocationId (integer): the unique ID corresponding to the location
-the participant is leaving when they begin to travel, NA if unknown
+## 3.3. Using visielse
 
-● travelEndTime (datetime): the time when the participant concluded their travel
-
-● travelEndLocationId (integer): the unique ID corresponding to the location the
-participant is traveling to
-
-● purpose (string factor): a description of the purpose for the recorded travel, one of:
-{“Coming Back From Restaurant”, “Eating”, “Going Back to Home”, “Recreation (Social
-Gathering)”, “Work/Home Commute”}
-
-● checkInTime (datetime): the time when the participant checked in to their
-destination
-
-● checkOutTime (datetime): the time when the participant left their destination
-
-● startingBalance (double): the participant’s starting balance at the beginning
-of their travels
-
-● endingBalance (double): the participant’s ending balance at the conclusion of
-their travel
-
-## 3.3. Data Structure and Summary
-
-The following codes are executed to reveal the structure and summary statistics of the data:
 
 ```{r}
-str(travel)
+visielse(travel)
 ```
 
 ## 3.4. Data Preparation
