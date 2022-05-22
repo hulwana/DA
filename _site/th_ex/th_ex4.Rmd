@@ -19,22 +19,20 @@ knitr::opts_chunk$set(echo = TRUE,
                       message = FALSE)
 ```
 
-# 1. Overview
+## 1. Overview
 
 In this take-home exercise 4, we will examine the daily routines of two selected participant of the city of Engagement, Ohio USA.
 
 
-# 2. Getting Started
+## 2. Getting Started
 Before we get started, it is important for us to ensure that the required R packages have been installed. If yes, we will load the R packages. If they have yet to be installed, we will install the R packages and load them onto R environment.
 
 The chunk code below will do the trick.
 
 ```{r}
-packages = c('scales', 'viridis', 
-             'lubridate', 'ggthemes', 
-             'gridExtra', 'tidyverse', 
-             'readxl', 'knitr',
-             'data.table', 'ViSiElse')
+packages = c( 'lubridate', 'patchwork', 
+             'gridExtra', 'tidyverse','knitr',
+             'data.table', 'clock')
 
 for (p in packages){
   if(!require(p, character.only = T)){
@@ -44,51 +42,174 @@ for (p in packages){
 }
 ```
 
-# 3. Dataset
+## 3. Dataset
 
-The *TravelJournal* dataset has been obtained from the *Journals* folder retrieved from [**Vast Challenge 2022**](https://vast-challenge.github.io/2022/) website.
+The *TravelJournal* and *CheckinJournal* dataset has been obtained from the *Journals* folder retrieved from [**Vast Challenge 2022**](https://vast-challenge.github.io/2022/) website.
 
 
-## 3.1. Importing Data
+### 3.1. Importing Data
 
-The code chunk below import *TravelJournal.csv* from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *travel*.
+The code chunk below import *TravelJournal.csv* and *CheckinJournal.csv *from the data folder by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) into R and save it as an tibble data frame called *travel* and *venue*.
 
 ```{r}
 travel <- read_csv("data/TravelJournal.csv")
+
+venue <- read_csv("data/CheckinJournal.csv")
 ```
 
-#### Participant log 
+### 3.2. Data Preparation
+
+#### 3.2.1. Extract the venue type from *venue* dataset
+As the end location of the participants are not readily identifiable in the *travel* dataset, we will mapped the *travelEndLocationId* to the venue type obtained from the *venue* dataset.
+
+Below is the code to get the distinct *venueId* and its corresonpding *venueType*.
 
 ```{r}
-parti_1 <- read_csv("C:/Users/Hulwa/Downloads/ISSS608/VAST-Challenge-2022/VAST-Challenge-2022/Datasets/Activity Logs/ParticipantStatusLogs1.csv")
-
-parti_2 <- read_csv("C:/Users/Hulwa/Downloads/ISSS608/VAST-Challenge-2022/VAST-Challenge-2022/Datasets/Activity Logs/ParticipantStatusLogs2.csv")
+venue_map <- venue %>% select(venueId, venueType) %>% distinct()
 ```
 
-### combine both 
+#### 3.2.2. Join the 2 datasets
+Left join the *travel* dataset with *venue_map* to identify the end location.
 
 ```{r}
-parti_com <- rbind(parti_1, parti_2)
+location <- merge(travel, venue_map, by.x = 'travelEndLocationId', by.y = 'venueId', all.x = TRUE)
 ```
 
-## 3.2. Data Definition
-
-The following data definition has been extracted from the *VAST Challenge 2022 Dataset Descriptions* file which can be obtained from the *Vast-Challenge-2022* folder downloaded earlier.
-
-### Data definition
-
-*TravelJournal.csv* data contains information about about participants’ motivation for movement around the city. This provides a compressed summary and additional context regarding location-event and financial transaction information contained in the Participant Logs.
-
-
-
-## 3.3. Using visielse
-
+#### 3.2.3. Identify the times where participants are travelling
+As there are 2 sets of start and end time for each observation, we will first need to get the interval where participants are travelling.
 
 ```{r}
-visielse(travel)
+transport <- location %>%
+  select(participantId, travelStartTime, travelEndTime) %>%
+  mutate(activity = "Transport")
+
+names(transport)[2] <- "startTime"
+names(transport)[3] <- "endTime"
 ```
 
-## 3.4. Data Preparation
+#### 3.2.4. Identify the times where participants are at a certain loacation
+
+```{r}
+place <- location %>%
+  select(participantId, checkInTime, checkOutTime, venueType)
+
+names(place)[2] <- "startTime"
+names(place)[3] <- "endTime"
+names(place)[4] <- "activity"
+```
+
+#### 3.2.5. Merge both *transport* and *place*
+
+```{r}
+activity <- rbind(place, transport)
+```
+
+
+## 4. Comparing the daily pattern of 2 participants
+
+### 4.1 Weekly pattern for *participantId* 100 and 200
+
+Participant with ID 100 and 200 are selected for comparison. We will compare their weekly pattern between 7 March 2022 - 13 March 2022.
+
+To examine the pattern and duration spent by each participant at the respective location, we will use [`geom_segment()`](https://ggplot2.tidyverse.org/reference/geom_segment.html) from the [`ggplot2`](https://ggplot2.tidyverse.org/index.html) package.
+
+### 4.1.1. Extract weekly data for participant 100 and 200
+
+```{r}
+pattern <- activity %>% filter(participantId == 100 | participantId == 200) %>%
+  filter(as.character(endTime) > "2022-03-07 00:00:00") %>%
+  filter(as.character(startTime) < "2022-03-14 00:00:00")
+```
+
+
+### 4.1.2. Plot the weekly routine for participant 100 and 200
+
+```{r}
+pl <- ggplot(pattern) +
+geom_segment(aes(x=activity, xend=activity, y=startTime, yend=endTime, color = activity), size = 10) +
+geom_hline(yintercept = as_datetime("2022-03-07 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-08 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-09 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-10 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-11 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-12 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-13 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+theme_bw() +
+facet_grid(participantId ~ .)+
+labs(x = 'Location', y = "Date Time", title = "Weekly routine of participantId 100 and 200" ) +
+coord_flip() 
+
+pl
+```
+
+### 4.2.1. Extract 8 March 2022 data for participant 100 and 200
+
+```{r}
+pattern2 <- activity %>% filter(participantId == 100 | participantId == 200) %>%
+  filter(as.character(endTime) > "2022-03-08 00:00:00") %>%
+  filter(as.character(endTime) < "2022-03-09 08:00:00")
+```
+
+
+### 4.2.2. Plot Tuesday, 8 March 2022 routine for both participants
+
+```{r}
+pl2 <- ggplot(pattern2) +
+geom_segment(aes(x=activity, xend=activity, y=startTime, yend=endTime, 
+                             color = activity), size = 10) +
+geom_hline(yintercept = as_datetime("2022-03-07 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-08 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-09 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+geom_hline(yintercept = as_datetime("2022-03-10 00:00:00"), color = "black", 
+           linetype = 'dashed', size = 1, alpha = 0.5) +
+theme_bw() +
+facet_grid(participantId ~ .)+
+labs(x = 'Location', y = "Date Time", title = "Routine of participantId 100 and 200 on 8 March 2022" ) +
+coord_flip() 
+
+pl2
+```
+
+
+Based on the chart plotted above, we notice the following similarities and differences between *participantId* 100 and 200:
+
+#### Work
+● Similarities : Both participant 100 and 200 work 5 days a week.
+● Differences : Participant 100 works from Tuesday - Saturday whereas participant 200 works from Monday - Friday.
+                Participant 100 starts and end work slightly later as compared to participant 200.
+                
+#### Lunch
+● Differences : Participant 200 goes for lunch at a much later timing as compared to participant 100.
+                Participant 200 takes lesser time to travel from work to the eating place as compares to         participant 100.
+
+#### Commute home from work
+● Similarities : The commute home from work is roughly the same for both participants.
+
+
+#### Going Home
+● Differences : As participant 200 ends work slightly earlier, participant 200 also reaches home slighlty earlier than participant 100.
+
+#### Recreation
+● Similarities : Both participants do not go to pubs on working days.
+● Differences : For this particular week, participant 200 does not go to the pub whereas particpant 100 goes on non-working days.
+
+#### Weekends
+● Differences : Participant 200 spent the weekend at home whereas participant 100 went out to the restaurant and pubs.
+
+
+
+
+
 
 
 
