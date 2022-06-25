@@ -26,6 +26,8 @@ navbar:
         href: "In_class_ex/In_class_ex_04.html"
       - text: "In class ex 6"
         href: "In_class_ex/In_class_ex_06.html"
+      - text: "In class ex 10"
+        href: "In_class_ex/In_class_ex_10.html"
     - text: "DataViz Makeover"
       menu:
       - text: "DataViz Makeover 1"
